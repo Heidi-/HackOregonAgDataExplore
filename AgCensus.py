@@ -86,5 +86,52 @@ def get_farmincome():
     filters["commodity_desc"] = "=INCOME,%20NET%20CASH%20FARM"
     filters["unit_desc"] = "=$%20/%20OPERATION"
     # query
-    areairr = query(**filters)
-    return areairr
+    fi = query(**filters)
+    return fi
+
+def get_irrigatedcrops():
+    """ Returen query results for irrigated crops.
+        This is still in exploratory phase.
+    """
+    #define query
+    filters = {}
+    filters["state_alpha"] = "=OR"
+    filters["prodn_practice_desc"] = "=IRRIGATED"
+    filters["sector_desc"] = "=CROPS"
+    # query
+    irrcrops = query(**filters)
+    return irrcrops
+
+def get_areacropsgrown():
+    """ Return query results for number of acres for each crop by county.
+        This is still in exploratory phase.
+    """
+    #define query
+    filters = {}
+    filters["state_alpha"] = "=OR"
+    filters["sector_desc"] = "=CROPS"
+    filters["year"] = "=2012"
+    filters["source_desc"] = "=CENSUS"
+    filters["agg_level_desc"] = "=COUNTY"
+    filters["unit_desc"] = "=ACRES"
+    #query
+    area = query(**filters)
+    #clean up
+    area.rename(columns={"Value":"acres"}, inplace=True)
+    area = area[area.acres != ' (D)']
+    area = area[area.acres != ' (Z)']
+    area = area[["county_name", "group_desc", "commodity_desc", "prodn_practice_desc", "util_practice_desc", "statisticcat_desc", "acres"]]
+    #   Depending on the type of crop, the statisticcat is:
+    #     AREA HARVESTED, AREA BEARING, AREA BEARING & NON-BEARING, 
+    #     AREA NON-BEARING, AREA GROWN, AREA NOT HARVESTED, AREA IN PRODUCTION
+    #   It appears that the two categories with NON-BEARING are empty for our
+    #     dataset (OR county-level from 2012). There may be some overlap
+    #     between AREA GROWN and AREA NOT HARVESTED.
+    #   Therefore, we will focus on AREA HARVESTED, AREA BEARING, AREA GROWN,
+    #     and AREA IN PRODUCTION
+    cts = ["AREA HARVESTED", "AREA BEARING", "AREA GROWN", "AREA IN PRODUCTION"]
+    area = area[area.statisticcat_desc.isin(cts)]
+    locale.setlocale(locale.LC_NUMERIC, '')
+    area.acres = area.acres.apply(locale.atoi)
+    return area
+
